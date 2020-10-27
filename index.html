@@ -107,7 +107,7 @@
     }
 
     const setupPage = async () => {
-        await tf.setBackend('webgl');
+        await tf.setBackend('wasm');
         await setupCamera();
         model = await blazeface.load();
         video.play();
