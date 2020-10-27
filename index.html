@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1, maximum-scale=1, user-scalable=no" />
+        <title>HoloView</title>
+        <link rel="stylesheet" href="style.css">
+        <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm/dist/tf-backend-wasm.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface"></script>
+    </head>
+    <body>
+        <video style="position: absolute; top: 0; left: 0; display: none;" id="webcam" autoplay playsinline width="440" height="780"></video>
+    </body>
+</html>
+
+<script type="module">
+    import * as THREE from 'https://unpkg.com/three@0.121.1/build/three.module.js'
+    import { GLTFLoader } from 'https://unpkg.com/three@0.121.1/examples/jsm/loaders/GLTFLoader.js'
+    let mesh;
+    // INIT THREE.JS
+    const scene = new THREE.Scene()
+    const cameraHelper = new THREE.Object3D()
+    const camera = new THREE.PerspectiveCamera( 55, window.innerWidth / window.innerHeight, 0.1, 1000 )
+    cameraHelper.add(camera)
+    scene.add(cameraHelper)
+    const renderer = new THREE.WebGLRenderer({ alpha: true })
+    renderer.setSize( window.innerWidth, window.innerHeight )
+    document.body.appendChild( renderer.domElement )
+    camera.position.z = 5
+    const light = new THREE.PointLight( 0xffffff, 1, 100 );
+    light.position.set( 10, 5, 15 );
+    scene.add( light )
+    const light2 = new THREE.AmbientLight( 0x404040, 0.3 ); // soft white light
+    scene.add( light2 );
+
+    const loader = new GLTFLoader()
+    loader.load(
+        './src/monkey.glb',
+        (data) => {
+            mesh = data.scene.children[0]
+            scene.add(data.scene.children[0])
+        }
+    )
+
+    let model, ctx, videoWidth, videoHeight, video, canvas;
+
+    async function setupCamera() {
+        video = document.getElementById('webcam');
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+            'audio': false,
+            'video': { facingMode: 'user' },
+        });
+        video.srcObject = stream;
+
+        return new Promise((resolve) => {
+            video.onloadedmetadata = () => {
+                resolve(video);
+            };
+        });
+    }
+
+    const renderPrediction = async () => {
+
+        const predictions = await model.estimateFaces(
+            video);
+
+        if (predictions.length > 0) {
+
+            const rotationAmount = 1
+            const faceCenter = {
+                x: predictions[0].topLeft[0] + predictions[0].bottomRight[0] / 2,
+                y: predictions[0].topLeft[1] + predictions[0].bottomRight[1] / 2
+            }
+            const objRotation = {
+                x: (faceCenter.x - window.innerWidth) / window.innerWidth * rotationAmount,
+                y: (faceCenter.y - window.innerHeight) / window.innerHeight * rotationAmount
+            }
+            mesh.rotation.y = objRotation.x
+            mesh.rotation.x = -objRotation.y
+        }
+
+        requestAnimationFrame(renderPrediction);
+    };
+
+    const animate = async () => {
+        const predictions = await model.estimateFaces(
+            video);
+
+        if (predictions.length > 0) {
+
+            const rotationAmount = 0.3
+            const faceCenter = {
+                x: (predictions[0].topLeft[0] + predictions[0].bottomRight[0]) / 2,
+                y: (predictions[0].topLeft[1] + predictions[0].bottomRight[1]) / 2
+            }
+            const objRotation = {
+                x: (faceCenter.x - 420) / 420 * rotationAmount,
+                y: (faceCenter.y - 340) / 340 * rotationAmount
+            }
+            mesh.rotation.y = objRotation.x
+            mesh.rotation.x = -objRotation.y
+        }
+        renderer.render( scene, camera )
+        requestAnimationFrame( animate )
+    }
+
+    const setupPage = async () => {
+        await tf.setBackend('wasm');
+        await setupCamera();
+        video.play();
+        model = await blazeface.load();
+        animate()
+    };
+
+    setupPage();
+</script>
