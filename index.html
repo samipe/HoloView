@@ -5,9 +5,9 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1, maximum-scale=1, user-scalable=no" />
         <title>HoloView</title>
         <link rel="stylesheet" href="style.css">
-        <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-        <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm/dist/tf-backend-wasm.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface"></script>
+        <script src="./src/tfjs.js"></script>
+        <script src="./src/tj-backend-wasm.js"></script>
+        <script src="./src/blazeface.js"></script>
     </head>
     <body>
         <video style="position: absolute; top: 0; left: 0; display: none;" id="webcam" autoplay playsinline width="440" height="780"></video>
@@ -107,6 +107,7 @@
     }
 
     const setupPage = async () => {
+        // options: cpu, webgl, wasm
         await tf.setBackend('webgl');
         await setupCamera();
         model = await blazeface.load();
